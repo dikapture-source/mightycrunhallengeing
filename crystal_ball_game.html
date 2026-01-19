@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Kuis Bola Ramalan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Container Utama */
+        .game-area {
+            text-align: center;
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        /* --- Style Bola Ramalan --- */
+        .crystal-ball-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        .crystal-ball-container:hover {
+            transform: scale(1.05);
+        }
+
+        .crystal-ball {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #aaddff, #3a0ca3, #000);
+            box-shadow: 0 0 30px #4cc9f0, inset 0 0 20px rgba(255,255,255,0.5);
+            position: relative;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .base {
+            width: 80px;
+            height: 20px;
+            background: #444;
+            border-radius: 50%;
+            margin: -10px auto 0;
+            box-shadow: 0 10px 10px black;
+        }
+
+        .instruction {
+            color: #4cc9f0;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            text-shadow: 0 0 5px #4cc9f0;
+        }
+
+        /* --- Area Pertanyaan (Kartu) --- */
+        .question-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+            display: none; /* Hidden by default */
+        }
+
+        .question-card.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #333;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background-color: #f72585;
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        h2 {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .options-grid {
+            display: grid;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .option {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            transition: all 0.3s;
+        }
+
+        .option:hover:not(.correct):not(.wrong) {
+            background: rgba(76, 201, 240, 0.2);
+            border-color: #4cc9f0;
+        }
+
+        /* --- Kelas State Jawaban --- */
+        .option.correct {
+            background-color: #2ec4b6; /* Green */
+            color: #000;
+            font-weight: bold;
+            border-color: #fff;
+            box-shadow: 0 0 15px #2ec4b6;
+        }
+
+        .option.wrong {
+            opacity: 0.5;
+            background-color: #f72585;
+            color: #fff;
+        }
+
+        .status-text {
+            margin-top: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+            min-height: 1.5em;
+        }
+
+        /* Score Display */
+        .score-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #4cc9f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            box-shadow: 0 0 10px rgba(76, 201, 240, 0.3);
+        }
+
+        .score-display span {
+            color: #4cc9f0;
+            font-weight: bold;
+        }
+
+        /* Animasi */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .shaking {
+            animation: shake 0.5s;
+        }
+        
+        /* Disable clicks when active */
+        .disabled {
+            pointer-events: none;
+            filter: grayscale(0.8);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="game-area">
+    <div class="score-display">Benar: <span id="scoreCorrect">0</span> | Salah: <span id="scoreWrong">0</span></div>
+    
+    <div class="crystal-ball-container" id="ballBtn" onclick="startGame()">
+        <div class="crystal-ball"></div>
+        <div class="base"></div>
+    </div>
+
+    <div class="instruction" id="instructionText">Klik Bola Ramalan untuk mendapat pertanyaan!</div>
+
+    <!-- Audio Elements -->
+    <audio id="soundBallClick" preload="auto">
+        <source src="sound_ball_click.mp3" type="audio/mpeg">
+        <source src="sound_ball_click.wav" type="audio/wav">
+    </audio>
+    <audio id="soundCorrect" preload="auto">
+        <source src="sound_correct.mp3" type="audio/mpeg">
+        <source src="sound_correct.wav" type="audio/wav">
+    </audio>
+    <audio id="soundWrong" preload="auto">
+        <source src="sound_wrong.mp3" type="audio/mpeg">
+        <source src="sound_wrong.wav" type="audio/wav">
+    </audio>
+
+    <div class="question-card" id="questionCard">
+        <div class="timer-bar">
+            <div class="timer-fill" id="timerFill"></div>
+        </div>
+        <h2 id="questionText">Pertanyaan akan muncul di sini...</h2>
+        <div class="options-grid" id="optionsContainer">
+        </div>
+        <div class="status-text" id="statusText"></div>
+    </div>
+</div>
+
+<script>
+    // --- DATA PERTANYAAN PROTEIN & OLAHRAGA ---
+    const questions = [
+        // PERTANYAAN PROTEIN
+        {
+            q: "Apa fungsi utama protein bagi tubuh setelah latihan fisik?",
+            options: ["Memberi energi instan", "Memperbaiki jaringan otot", "Melumasi sendi", "Meningkatkan detak jantung"],
+            answer: 1,
+            category: "Protein"
+        },
+        {
+            q: "Zat apakah yang merupakan 'blok bangunan' terkecil penyusun protein?",
+            options: ["Glukosa", "Asam Lemak", "Asam Amino", "Glikogen"],
+            answer: 2,
+            category: "Protein"
+        },
+        {
+            q: "Manakah sumber protein 'lengkap' (mengandung semua asam amino esensial)?",
+            options: ["Telur", "Nasi Putih", "Minyak Zaitun", "Apel"],
+            answer: 0,
+            category: "Protein"
+        },
+        {
+            q: "Jenis protein suplemen apa yang paling cepat diserap tubuh?",
+            options: ["Casein", "Soy Protein", "Kolagen", "Whey Protein"],
+            answer: 3,
+            category: "Protein"
+        },
+        {
+            q: "Mengapa atlet sering mengonsumsi Casein sebelum tidur?",
+            options: ["Diserap perlahan sepanjang malam", "Energi instan", "Membakar lemak", "Agar tidak mimpi buruk"],
+            answer: 0,
+            category: "Protein"
+        },
+        {
+            q: "Apa istilah asam amino yang TIDAK bisa diproduksi tubuh?",
+            options: ["Non-Esensial", "Asam Amino Esensial", "Kondisional", "Laktat"],
+            answer: 1,
+            category: "Protein"
+        },
+        {
+            q: "Berapa gram protein yang direkomendasikan per kg berat badan untuk atlet kekuatan?",
+            options: ["0.8-1.0g", "1.2-2.0g", "3.0-4.0g", "0.3-0.5g"],
+            answer: 1,
+            category: "Protein"
+        },
+        {
+            q: "Sumber protein nabati mana yang memiliki kandungan protein tertinggi?",
+            options: ["Bayam", "Kacang Kedelai", "Beras Merah", "Brokoli"],
+            answer: 1,
+            category: "Protein"
+        },
+        {
+            q: "Berapa waktu optimal mengonsumsi protein setelah latihan?",
+            options: ["1-2 jam setelah", "30 menit - 1 jam setelah", "3 jam atau lebih", "Saat masih berolahraga"],
+            answer: 1,
+            category: "Protein"
+        },
+        // PERTANYAAN OLAHRAGA
+        {
+            q: "Berapa detak jantung maksimal yang disarankan saat berolahraga (usia 20 tahun)?",
+            options: ["100 bpm", "150-170 bpm", "200+ bpm", "80-90 bpm"],
+            answer: 1,
+            category: "Olahraga"
+        },
+        {
+            q: "Jenis olahraga mana yang paling efektif untuk membangun massa otot?",
+            options: ["Yoga", "Renang", "Latihan Beban (Resistance Training)", "Jalan Kaki"],
+            answer: 2,
+            category: "Olahraga"
+        },
+        {
+            q: "Berapa frekuensi latihan beban ideal untuk pemula per minggu?",
+            options: ["1 hari", "2-3 hari", "5-6 hari", "7 hari"],
+            answer: 1,
+            category: "Olahraga"
+        },
+        {
+            q: "Olahraga aerobik apa yang paling bagus untuk kesehatan jantung?",
+            options: ["Angkat Beban", "Lari/Jogging", "Yoga", "Pilates"],
+            answer: 1,
+            category: "Olahraga"
+        },
+        {
+            q: "Apa manfaat utama melakukan pemanasan sebelum berolahraga?",
+            options: ["Menambah keringat", "Meningkatkan suhu tubuh dan fleksibilitas", "Mengecilkan perut", "Meningkatkan berat badan otot"],
+            answer: 1,
+            category: "Olahraga"
+        },
+        {
+            q: "Berapa durasi minimal olahraga kardio per hari untuk kesehatan optimal?",
+            options: ["10 menit", "20 menit", "30 menit", "60 menit"],
+            answer: 2,
+            category: "Olahraga"
+        },
+        {
+            q: "Istirahat berapa lama antar set dalam latihan beban yang ideal?",
+            options: ["10-20 detik", "30-60 detik", "2-3 menit", "5+ menit"],
+            answer: 1,
+            category: "Olahraga"
+        },
+        {
+            q: "Mengapa penting melakukan pendinginan (cool down) setelah olahraga?",
+            options: ["Agar tidak kedinginan", "Mengurangi soreness dan menormalkan detak jantung", "Mempercepat pertumbuhan otot", "Menghemat energi"],
+            answer: 1,
+            category: "Olahraga"
+        }
+    ];
+
+    // --- VARIABEL STATE ---
+    let isGameRunning = false;
+    let timerInterval;
+    let currentTime = 5;
+    let currentQuestionIndex = null;
+    let scoreCorrect = 0;
+    let scoreWrong = 0;
+    let answered = false;
+
+    // --- ELEMENT DOM ---
+    const ballBtn = document.getElementById('ballBtn');
+    const instructionText = document.getElementById('instructionText');
+    const questionCard = document.getElementById('questionCard');
+    const questionText = document.getElementById('questionText');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const timerFill = document.getElementById('timerFill');
+    const statusText = document.getElementById('statusText');
+    const scoreCorrectEl = document.getElementById('scoreCorrect');
+    const scoreWrongEl = document.getElementById('scoreWrong');
+    const soundBallClick = document.getElementById('soundBallClick');
+    const soundCorrect = document.getElementById('soundCorrect');
+    const soundWrong = document.getElementById('soundWrong');
+
+    // --- FUNGSI UTAMA ---
+
+    function startGame() {
+        // Mencegah klik ganda saat game sedang berjalan
+        if (isGameRunning) return;
+
+        // 1. Mainkan suara ball click
+        playSound(soundBallClick);
+
+        // 2. Reset UI & State
+        isGameRunning = true;
+        currentTime = 5;
+        ballBtn.classList.add('disabled'); // Matikan bola sementara
+        ballBtn.classList.remove('shaking'); // Hapus animasi lama
+        void ballBtn.offsetWidth; // Trigger reflow untuk reset animasi
+        ballBtn.classList.add('shaking'); // Tambah animasi shake
+        
+        instructionText.innerText = "Membaca pikiranmu...";
+        statusText.innerText = "";
+        
+        // Sembunyikan kartu dulu untuk efek reset
+        questionCard.classList.remove('active');
+
+        // 3. Pilih Pertanyaan Random
+        setTimeout(() => {
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            loadQuestion(randomIndex);
+            
+            // Tampilkan Kartu
+            instructionText.innerText = "Cepat! Jawab dalam 5 detik!";
+            questionCard.classList.add('active');
+            
+            // Mulai Timer
+            startTimer();
+        }, 800); // Delay sedikit untuk efek "loading" bola ramalan
+    }
+
+    function loadQuestion(index) {
+        currentQuestionIndex = index;
+        const data = questions[index];
+        answered = false;
+        
+        questionText.innerText = data.q;
+        optionsContainer.innerHTML = ""; // Bersihkan opsi lama
+
+        data.options.forEach((opt, i) => {
+            const div = document.createElement('div');
+            div.className = 'option';
+            div.innerText = opt;
+            div.id = `opt-${i}`;
+            div.onclick = () => handleAnswer(i);
+            div.style.cursor = 'pointer';
+            optionsContainer.appendChild(div);
+        });
+        
+        // Reset bar timer visual
+        timerFill.style.width = "100%";
+        timerFill.style.backgroundColor = "#f72585";
+    }
+
+    function handleAnswer(selectedIndex) {
+        // Jika sudah dijawab atau belum selesai loading, abaikan
+        if (answered || isGameRunning === false) return;
+
+        answered = true;
+        clearInterval(timerInterval);
+
+        const correctIndex = questions[currentQuestionIndex].answer;
+        const isCorrect = selectedIndex === correctIndex;
+
+        // Update Score & Suara
+        if (isCorrect) {
+            scoreCorrect++;
+            statusText.innerText = "✓ Jawaban Benar!";
+            statusText.style.color = "#2ec4b6";
+            playSound(soundCorrect); // Mainkan suara benar
+        } else {
+            scoreWrong++;
+            statusText.innerText = "✗ Jawaban Salah!";
+            statusText.style.color = "#f72585";
+            playSound(soundWrong); // Mainkan suara salah
+        }
+
+        // Update Score Display
+        scoreCorrectEl.innerText = scoreCorrect;
+        scoreWrongEl.innerText = scoreWrong;
+
+        // Tampilkan semua opsi dengan warna
+        for (let i = 0; i < 4; i++) {
+            const el = document.getElementById(`opt-${i}`);
+            el.onclick = null; // Disable click
+            el.style.cursor = 'default';
+            
+            if (i === correctIndex) {
+                el.classList.add('correct');
+            } else if (i === selectedIndex && !isCorrect) {
+                el.classList.add('wrong');
+            }
+        }
+
+        instructionText.innerText = "Klik Bola Ramalan lagi untuk lanjut.";
+        ballBtn.classList.remove('disabled');
+        isGameRunning = false;
+    }
+
+    function startTimer() {
+        // Update setiap detik
+        timerInterval = setInterval(() => {
+            currentTime--;
+            
+            // Update Visual Bar (5 detik = 100%, 4 = 80%, dst)
+            const percentage = (currentTime / 5) * 100;
+            timerFill.style.width = `${percentage}%`;
+
+            if (currentTime <= 0) {
+                endRound(false); // false = waktu habis, tidak dijawab
+            }
+        }, 1000);
+    }
+
+    function endRound(timeExpired = true) {
+        if (answered) return; // Sudah dijawab, skip
+        
+        answered = true;
+        clearInterval(timerInterval);
+        
+        // 1. Tampilkan Jawaban Benar
+        const correctIndex = questions[currentQuestionIndex].answer;
+        
+        // Loop semua opsi untuk memberi warna
+        for (let i = 0; i < 4; i++) {
+            const el = document.getElementById(`opt-${i}`);
+            el.onclick = null; // Disable click
+            el.style.cursor = 'default';
+            
+            if (i === correctIndex) {
+                el.classList.add('correct');
+            } else {
+                el.classList.add('wrong');
+            }
+        }
+
+        // 2. Update Status & Score & Suara
+        statusText.innerText = timeExpired ? "⏰ Waktu Habis! Jawaban ditampilkan." : "";
+        statusText.style.color = "#ff6b6b";
+        scoreWrong++;
+        scoreWrongEl.innerText = scoreWrong;
+        playSound(soundWrong); // Mainkan suara salah saat waktu habis
+        
+        instructionText.innerText = "Klik Bola Ramalan lagi untuk lanjut.";
+
+        // 3. Aktifkan kembali Bola
+        ballBtn.classList.remove('disabled');
+        isGameRunning = false;
+    }
+
+    // --- FUNGSI PUTAR SUARA ---
+    function playSound(audioElement) {
+        // Reset audio ke awal
+        audioElement.currentTime = 0;
+        
+        // Mainkan dengan error handling
+        const playPromise = audioElement.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.log("Audio playback failed:", error);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
